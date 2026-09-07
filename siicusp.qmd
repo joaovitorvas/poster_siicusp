@@ -1,0 +1,278 @@
+---
+format:
+  typst: 
+    papersize: "a0"
+    margin:
+      x: "5cm"
+      y: "5cm"
+    fontsize: "30pt"
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+<!-- CABEÇALHO CUSTOMIZADO COM TYPST -->
+```{=typst}
+#align(center)[
+  #image("USP-240x135.jpg", width: 20%)
+  
+  #v(1em)
+  #text(weight: "bold", size: 2.2em)[Fundamentos de Inferência Causal]
+  
+  #v(0.5em)
+  #text(size: 1.2em)[Orientador: Rafael B. Stern]
+  
+  #v(1em)
+  #text(weight: "bold", size: 1.2em)[Daniela Siqi Chen,  Franklin Alonso Alves Bezerra, João Vitor Vasconcelos Lima]
+  
+  #text(size: 1.1em)[Universidade de São Paulo (USP)]
+  
+  #v(2em)
+]
+
+```
+
+:::: {layout="[1, 1]"}
+
+::: {#intro}
+
+## Introdução e Objetivos
+
+Aqui você contextualiza a sua pesquisa. Qual o problema? Por que ele é importante? Quais são os objetivos principais da sua Iniciação Científica?
+:::
+
+::: {#exemplo1}
+
+## Exemplo 1
+
+Apresente a primeira aplicação prática, modelo ou conjunto de dados inicial.
+:::
+
+::::
+
+:::: {layout="[1, 1]"}
+
+::: {#exemplo2}
+
+## Exemplo 2
+
+Continue o desenvolvimento da sua pesquisa. Se houver código, os gráficos gerados aparecerão automaticamente aqui.
+:::
+
+::: {#exemplo3}
+
+## Exemplo 3
+
+Apresente mais resultados, tabelas de comparação ou imagens explicativas do seu método.
+:::
+
+::::
+
+:::: {layout="[1, 1]"}
+
+::: {#exemplo4}
+
+## Aplicação: Aposentadoria e Mercado de Trabalho
+
+**Contexto e Metodologia:**
+
+* **Objetivo:** Avaliar o efeito causal da concessão de aposentadoria sobre a probabilidade de continuar ocupado no mercado de trabalho.
+* **Método:** Regressão Descontínua Fuzzy (RDD), explorando o salto na probabilidade de aposentadoria nas idades mínimas do RGPS.
+* **Base:** Réplica de Mentlik, Menezes-Filho e Komatsu (2019), usando dados da PNAD 2014.
+
+**1º e 2º Estágios (grupo: Homens Urbanos, corte = 65 anos):**
+
+```{r}
+#| label: preparacao-aposentadoria
+#| results: hide
+
+library(tidyverse)
+library(lubridate)
+library(rdrobust)
+library(knitr)
+
+download.file(
+  "https://zenodo.org/records/19056769/files/pnad2014.rds",
+  "pnad2014.rds",
+  mode = "wb", quiet = TRUE
+)
+
+pnad <- readRDS("pnad2014.rds")
+
+pnad_final <- pnad %>%
+  mutate(
+    across(c(ANO_NASC, MES_NASC, DIA_NASC), as.numeric),
+    DATA_NASCIMENTO = make_date(year = ANO_NASC, month = MES_NASC, day = DIA_NASC),
+    DATA_REFERENCIA = as.Date("2014-09-27"),
+    IDADE_CONTINUA = as.numeric(difftime(DATA_REFERENCIA, DATA_NASCIMENTO, units = "days")) / 365.25,
+    RECEBE_APOSENTADORIA = replace_na(RECEBE_APOSENTADORIA, 0),
+    APOSENTADO = if_else(RECEBE_APOSENTADORIA == 1, 1, 0),
+    OCUPADO = if_else(TRABALHOU_SEMANA == 1, 1, 0),
+    HOMEM = if_else(SEXO == 2, 1, 0),
+    RURAL = if_else(SITUACAO_CENSITARIA >= 4, 1, 0)
+  ) %>%
+  filter(!is.na(IDADE_CONTINUA), IDADE_CONTINUA >= 40, IDADE_CONTINUA <= 100, !is.na(DATA_NASCIMENTO)) %>%
+  drop_na(OCUPADO)
+
+config_grupos <- list(
+  list(nome = "Homens Urbanos", h_sexo = 1, r = 0, corte = 65),
+  list(nome = "Mulheres Urbanas", h_sexo = 0, r = 0, corte = 60),
+  list(nome = "Homens Rurais", h_sexo = 1, r = 1, corte = 60),
+  list(nome = "Mulheres Rurais", h_sexo = 0, r = 1, corte = 55)
+)
+
+rodar_replica_completa <- function(g) {
+  df_sub <- pnad_final %>% filter(HOMEM == g$h_sexo, RURAL == g$r)
+
+  res_1st <- rdrobust(y = df_sub$APOSENTADO, x = df_sub$IDADE_CONTINUA, c = g$corte)
+  res_2nd <- rdrobust(y = df_sub$OCUPADO, x = df_sub$IDADE_CONTINUA, c = g$corte, fuzzy = df_sub$APOSENTADO)
+
+  data.frame(
+    Grupo = g$nome,
+    FS_Coef = round(res_1st$coef["Conventional", 1], 3),
+    FS_Se = round(res_1st$se["Conventional", 1], 3),
+    SS_Coef = round(res_2nd$coef["Conventional", 1], 3),
+    SS_Se = round(res_2nd$se["Conventional", 1], 3),
+    N_eff = res_2nd$N_h[1] + res_2nd$N_h[2]
+  )
+}
+```
+
+```{r}
+#| label: grafico-aposentadoria
+#| fig-align: center
+#| fig-width: 10
+#| fig-height: 5
+#| results: hide
+
+dados_h_urbano <- pnad_final %>% filter(HOMEM == 1, RURAL == 0)
+
+par(mfrow = c(1, 2))
+
+invisible(capture.output(
+  rdplot(y = dados_h_urbano$APOSENTADO, x = dados_h_urbano$IDADE_CONTINUA, c = 65, p = 4,
+         title = "1º Estágio: Aposentadoria", y.label = "Proporção de Aposentados",
+         x.label = "Idade Contínua", col.lines = "orange")
+))
+
+invisible(capture.output(
+  rdplot(y = dados_h_urbano$OCUPADO, x = dados_h_urbano$IDADE_CONTINUA, c = 65, p = 4,
+         title = "2º Estágio: Ocupação", y.label = "Ocupação",
+         x.label = "Idade Contínua", col.lines = "red")
+))
+
+par(mfrow = c(1, 1))
+```
+
+**Resultados por grupo (Fuzzy RDD):**
+
+```{r}
+#| label: tabela-aposentadoria
+
+tabela_completa <- map_df(config_grupos, rodar_replica_completa)
+
+tabela_poster <- tabela_completa %>%
+  transmute(
+    Grupo = Grupo,
+    `1º Estágio` = paste0(FS_Coef, " (", FS_Se, ")"),
+    `2º Estágio` = paste0(SS_Coef, " (", SS_Se, ")"),
+    N = N_eff
+  )
+
+kable(tabela_poster, align = "lccr")
+```
+:::
+
+::: {#exemplo5}
+
+## Aplicação: Efeito Causal no País Basco
+
+**Contexto e Metodologia:**
+
+* **Objetivo:** Avaliar o efeito causal dos conflitos armados no País Basco entre 1960 e 1997.
+* **Método:** Utilização de Controle Sintético para criar um contrafactual baseado em outras regiões da Espanha não impactadas pelos conflitos.
+* **Base:** Replicação do estudo clássico de Abadie e Gardeazabal (2003).
+
+**Evolução do PIB per capita:**
+
+```{r}
+#| label: preparacao-dados
+#| results: hide
+
+library(tidyverse)
+library(Synth)
+library(knitr)
+data(basque)
+
+dados_preparados <- dataprep(
+  foo = basque, predictors = c("school.illit", "school.prim", "school.med", "school.high", "school.post.high", "invest"),
+  predictors.op = "mean", time.predictors.prior = 1964:1969,
+  special.predictors = list(list("gdpcap", 1960:1969, "mean"), list("sec.agriculture", 1961:1969, "mean"), list("sec.energy", 1961:1969, "mean"), list("sec.industry", 1961:1969, "mean"), list("sec.construction", 1961:1969, "mean"), list("sec.services.venta", 1961:1969, "mean"), list("sec.services.nonventa", 1961:1969, "mean"), list("popdens", 1969, "mean")),
+  dependent = "gdpcap", unit.variable = "regionno", unit.names.variable = "regionname", time.variable = "year",
+  treatment.identifier = 17, controls.identifier = c(2:16, 18), time.optimize.ssr = 1960:1969, time.plot = 1955:1997
+)
+```
+
+```{r}
+#| label: modelo-grafico
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+#| results: hide
+
+invisible(capture.output({resultado_synth <- synth(data.prep.obj = dados_preparados)}))
+
+path.plot(synth.res = resultado_synth, dataprep.res = dados_preparados,
+          Ylab = "PIB per capita (1986 USD)", Xlab = "Ano",
+          Legend = c("País Basco", "País Basco Sintético"), Legend.position = "bottomright")
+abline(v = 1975, lty = 2, col = "red") 
+
+```
+
+**Resultados do Modelo:**
+
+```{r}
+#| label: resultados-finais
+
+anos <- as.numeric(rownames(dados_preparados$Y1plot))
+real <- as.vector(dados_preparados$Y1plot)
+pesos_w <- resultado_synth$solution.w
+sintetico <- as.vector(dados_preparados$Y0plot %*% pesos_w)
+
+tabela_comparacao <- data.frame(Ano = anos, Real = real, Sintetico = sintetico) %>%
+  mutate(Gap = Real - Sintetico, Gap_Percentual = (Gap / Sintetico) * 100)
+
+ace_pos_1975 <- tabela_comparacao %>% filter(Ano >= 1975) %>% summarise(ACE_Absoluto = mean(Gap), ACE_Percentual = mean(Gap_Percentual))
+
+tabela_ace <- data.frame(
+  Métrica = c("Queda Média Absoluta (em milhares)", "Queda Média Relativa (%)"),
+  Estimativa = c(ace_pos_1975$ACE_Absoluto, ace_pos_1975$ACE_Percentual)
+)
+
+kable(tabela_ace, digits = 2, col.names = c("Indicador de Impacto (Pós-1975)", "Estimativa do ACE"))
+
+```
+
+:::
+
+::::
+
+:::: {layout="[1, 1]"}
+
+::: {#referencias}
+
+## Referências Bibliográficas
+
+* Autor, A. (2025). *Nome do Artigo Principal*. Revista de Ciências.
+* Autor, B. (2026). *Livro de Base da IC*. Editora Universitária.
+:::
+
+::: {#agradecimentos}
+
+## Agradecimentos
+
+Agradeço ao meu orientador e aos órgãos de fomento (como CNPq, FAPESP, Capes) que auxiliaram no desenvolvimento deste trabalho.
+:::
+
+::::
