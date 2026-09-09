@@ -5,7 +5,7 @@ format:
     margin:
       x: "5cm"
       y: "5cm"
-    fontsize: "30pt"
+    fontsize: "18pt"
 execute:
   echo: false
   warning: false
@@ -13,9 +13,10 @@ execute:
 ---
 
 <!-- CABEÇALHO CUSTOMIZADO COM TYPST -->
+
 ```{=typst}
 #align(center)[
-  #image("USP-240x135.jpg", width: 20%)
+  #image("USP-240x135.jpg", width: 10%)
   
   #v(1em)
   #text(weight: "bold", size: 2.2em)[Fundamentos de Inferência Causal]
@@ -30,58 +31,163 @@ execute:
   
   #v(2em)
 ]
-
 ```
 
 :::: {layout="[1, 1]"}
 
 ::: {#intro}
+## Introdução
 
-## Introdução e Objetivos
-
-Aqui você contextualiza a sua pesquisa. Qual o problema? Por que ele é importante? Quais são os objetivos principais da sua Iniciação Científica?
+A inferência causal vai além da identificação de padrões em dados, buscando estabelecer relações de causa e efeito por meio da estimação de cenários contrafactuais — o que teria ocorrido na ausência de uma intervenção. Essa abordagem é fundamental para isolar impactos reais de variáveis, controlando fatores de confusão, e possui ampla aplicação em áreas como economia, políticas públicas e algoritmos de decisão.
 :::
 
-::: {#exemplo1}
+::: {#obj}
+## Objetivo
 
-## Exemplo 1
-
-Apresente a primeira aplicação prática, modelo ou conjunto de dados inicial.
+Este trabalho teve como objetivo revisar os fundamentos teóricos da inferência causal, com base nos princípios de Fisher e na modelagem gráfica de Judea Pearl, e replicar empiricamente métodos de estimação causal, como critérios backdoor e frontdoor, variáveis instrumentais, regression discontinuity design (RDD) e controle sintético. Os resultados foram organizados em material didático acessível, visando contribuir para o ensino e a aplicação desses métodos em pesquisas observacionais.
 :::
 
 ::::
 
-:::: {layout="[1, 1]"}
+<!-- ============ GRADE DE EXEMPLOS: 3 COLUNAS x 2 LINHAS ============ -->
+
+:::: {layout="[1, 1, 1]"}
+
+::: {#exemplo1}
+## Critérios backdoor
+
+**Critério Backdoor:** método utilizado para identificar um conjunto de variáveis que deve ser controlado para estimar o efeito causal de uma variável $X$ sobre um resultado $Y$. O critério busca bloquear os caminhos *backdoor*, isto é, caminhos que conectam $X$ e $Y$ por meio de variáveis de confusão, evitando que associações não causais sejam interpretadas como efeito causal.
+:::
 
 ::: {#exemplo2}
+## Critério frontdoor
 
-## Exemplo 2
-
-Continue o desenvolvimento da sua pesquisa. Se houver código, os gráficos gerados aparecerão automaticamente aqui.
+**Critério Frontdoor:** método utilizado para identificar o efeito causal de uma variável $X$ sobre um resultado $Y$ mesmo quando existe confundimento entre $X$ e $Y$. O critério utiliza uma variável mediadora $M$, que recebe o efeito de $X$ e influencia $Y$, permitindo bloquear os caminhos de confundimento e estimar o efeito causal de $X$ sobre $Y$.
 :::
 
 ::: {#exemplo3}
+## Variáveis instrumentais
 
-## Exemplo 3
+**Variáveis Instrumentais:** método utilizado para estimar um efeito causal quando existe confundimento entre a variável de tratamento $X$ e o resultado $Y$. Utiliza-se uma variável instrumental $Z$, que influencia $X$, mas não afeta $Y$ diretamente nem está associada aos fatores não observados que influenciam $Y$. Assim, $Z$ permite isolar a variação de $X$ que pode ser utilizada para identificar seu efeito causal sobre $Y$.
 
-Apresente mais resultados, tabelas de comparação ou imagens explicativas do seu método.
+**Aplicação: Proximidade de Faculdades e Retorno à Escolaridade (Card, 1993)**
+
+*   **Objetivo:** Estimar o retorno causal da escolaridade sobre os salários utilizando Variáveis Instrumentais (VI) para superar a endogeneidade.
+*   **Método:** Emprego da proximidade geográfica a faculdades de 4 anos como instrumento para a escolaridade.
+
+```{r}
+#| label: vi-graficos-patchwork
+#| fig-align: center
+#| fig-width: 14
+#| fig-height: 4.8
+#| results: hide
+
+library(tidyverse)
+library(scales)
+library(patchwork)
+
+# Tema otimizado para o grid 1x3
+theme_card <- function(base_size = 9) {
+  theme_minimal(base_size = base_size) +
+  theme(
+    plot.title       = element_text(size = 9, face = "bold", margin = margin(b = 4)),
+    plot.subtitle    = element_text(size = 7.5, color = "grey40", margin = margin(b = 6)),
+    plot.caption     = element_text(size = 6.5,  color = "grey50", margin = margin(t = 6)),
+    axis.title       = element_text(size = 8, color = "grey30"),
+    axis.text        = element_text(size = 7,  color = "grey40"),
+    panel.grid.major = element_line(color = "grey92", linewidth = 0.3),
+    panel.grid.minor = element_blank(),
+    legend.position  = "bottom",
+    legend.text      = element_text(size = 7),
+    legend.title     = element_blank(),
+    plot.margin      = margin(4, 4, 4, 4)
+  )
+}
+COR_VI <- "#185FA5"; COR_PROX <- "#185FA5"; COR_SEM <- "#888780"
+
+# --- Gráfico 1: Efeito na Escolaridade ---
+fig1_dados <- tibble(
+  quartil  = c(1, 2, 3, 4, 1, 2, 3, 4),
+  educacao = c(11.0, 13.0, 13.9, 15.2, 12.1, 13.4, 14.3, 15.4),
+  grupo    = rep(c("Sem facul. próxima", "Com facul. próxima"), each = 4)
+) %>% mutate(grupo = factor(grupo, levels = c("Sem facul. próxima", "Com facul. próxima")))
+
+diffs <- tibble(quartil = 1:4, delta = c(1.1, 0.4, 0.4, 0.2), y_label = c(11.55, 13.20, 14.10, 15.30))
+
+p1 <- ggplot(fig1_dados, aes(x = quartil, y = educacao, color = grupo, shape = grupo, linetype = grupo)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 2.5) +
+  geom_segment(data = diffs, aes(x = quartil - 0.05, xend = quartil - 0.05, y = y_label - delta/2, yend = y_label + delta/2),
+               inherit.aes = FALSE, color = "grey50", linewidth = 0.4, arrow = arrow(ends = "both", length = unit(0.06,"inches"))) +
+  geom_label(data = diffs, aes(x = quartil + 0.28, y = y_label, label = paste0("Δ=", delta)),
+             inherit.aes = FALSE, size = 2.2, color = "grey30", label.size = 0, fill = "white") +
+  scale_x_continuous(breaks = 1:4, labels = c("1º\n(menor prev.)", "2º", "3º", "4º\n(maior prev.)")) +
+  scale_color_manual(values = c("Sem facul. próxima" = COR_SEM, "Com facul. próxima" = COR_PROX)) +
+  labs(title = "Educação por quartil previsto", subtitle = "Impacto maior no 1º quartil", x = "Quartil de educação prevista", y = "Anos de educação (média)") +
+  theme_card()
+
+# --- Gráfico 2: Estimativas de VI (Painéis A e B) ---
+tab3_plot <- tibble(
+  especificacao = factor(c("A — sem\nbackg.", "A — com\nbackg.", "B — sem\nbackg.", "B — com\nbackg."), levels = c("A — sem\nbackg.", "A — com\nbackg.", "B — sem\nbackg.", "B — com\nbackg.")),
+  vi = c(0.132, 0.140, 0.122, 0.132), ep = c(0.055, 0.055, 0.046, 0.049)
+)
+p2 <- ggplot(tab3_plot, aes(x = especificacao, y = vi)) +
+  geom_col(fill = COR_VI, alpha = 0.85, width = 0.5) +
+  geom_errorbar(aes(ymin = vi - ep, ymax = vi + ep), width = 0.18, linewidth = 0.5) +
+  geom_text(aes(label = sprintf("%.3f", vi), y = vi + ep + 0.005), size = 2.6, vjust = 0, fontface = "bold") +
+  scale_y_continuous(limits = c(0, 0.22), breaks = seq(0, 0.20, 0.05), labels = scales::percent_format(accuracy = 1)) +
+  labs(title = "Retorno à educação por VI", subtitle = "Instrumento: faculdade local", x = "Especificação", y = "Retorno por ano") +
+  theme_card()
+
+# --- Gráfico 3: Síntese de todos os Estimadores ---
+p_sintese <- tibble(
+  estimador = factor(c("VI básico", "VI inter.\nbinária", "VI inter.\n8 classes", "VI 9 inter.\n(over-ID)"), levels = c("VI básico", "VI inter.\nbinária", "VI inter.\n8 classes", "VI 9 inter.\n(over-ID)")),
+  coef = c(0.132, 0.093, 0.097, 0.115), ep = c(0.049, 0.065, 0.048, 0.034)
+)
+p3 <- ggplot(p_sintese, aes(x = estimador, y = coef)) +
+  geom_col(fill = COR_VI, alpha = 0.85, width = 0.5) +
+  geom_errorbar(aes(ymin = coef - ep, ymax = coef + ep), width = 0.18, linewidth = 0.5) +
+  geom_text(aes(label = sprintf("%.3f", coef)), vjust = -1.3, size = 2.6, fontface = "bold") +
+  scale_y_continuous(limits = c(0, 0.22), breaks = seq(0, 0.20, 0.05), labels = scales::percent_format(accuracy = 1)) +
+  labs(title = "Síntese dos estimadores (VI)", subtitle = "Validade conjunta aceita", x = "Estimador", y = "Retorno por ano") +
+  theme_card()
+
+# --- Renderizar lado a lado ---
+p_final <- p1 | p2 | p3
+p_final
+
+```
+
+**Síntese dos Resultados:** A proximidade de uma faculdade aumenta a educação média em ~1,1 ano no 1º quartil, indicando que o instrumento afeta principalmente jovens de famílias com baixa escolaridade prevista. As estimativas de VI demonstram um retorno entre 12% e 14% por ano adicional de escolaridade. O efeito direto da proximidade sobre os salários é estatisticamente insignificante, sugerindo que o instrumento age exclusivamente via decisão educacional.
+
+```{r}
+#| label: tabela-vi
+
+tab_concl <- tibble(
+  Resultado = c("Retorno à educação (VI)", "Efeito na escolaridade", "Efeito direto nos salários"),
+  Estimativa = c("**12–14%**", "**+0,32 a +0,38 anos**", "~0,015 (n.s.)")
+)
+
+knitr::kable(tab_concl, align = c("l", "c"))
+
+```
+
 :::
 
 ::::
 
-:::: {layout="[1, 1]"}
+:::: {layout="[1, 1, 1]"}
 
 ::: {#exemplo4}
+## RDD
 
-## Aplicação: Aposentadoria e Mercado de Trabalho
+**Regressão Descontínua Fuzzy (RDD):** método utilizado para estimar efeitos causais quando a probabilidade de receber um tratamento muda de forma descontínua ao redor de um determinado ponto de corte. No caso *fuzzy*, ultrapassar o ponto de corte não determina o tratamento, mas altera sua probabilidade de recebê-lo.
 
-**Contexto e Metodologia:**
+**Aplicação: Aposentadoria e Mercado de Trabalho**
 
-* **Objetivo:** Avaliar o efeito causal da concessão de aposentadoria sobre a probabilidade de continuar ocupado no mercado de trabalho.
-* **Método:** Regressão Descontínua Fuzzy (RDD), explorando o salto na probabilidade de aposentadoria nas idades mínimas do RGPS.
-* **Base:** Réplica de Mentlik, Menezes-Filho e Komatsu (2019), usando dados da PNAD 2014.
-
-**1º e 2º Estágios (grupo: Homens Urbanos, corte = 65 anos):**
+* **Objetivo:** Avaliar o efeito causal da concessão de aposentadoria sobre a probabilidade de continuar ocupado.
+* **Método:** RDD Fuzzy, explorando o salto na probabilidade de aposentadoria nas idades mínimas do RGPS.
+* **Base:** Réplica de Mentlik, Menezes-Filho e Komatsu (2019), PNAD 2014.
 
 ```{r}
 #| label: preparacao-aposentadoria
@@ -92,11 +198,13 @@ library(lubridate)
 library(rdrobust)
 library(knitr)
 
-download.file(
-  "https://zenodo.org/records/19056769/files/pnad2014.rds",
-  "pnad2014.rds",
-  mode = "wb", quiet = TRUE
-)
+if(!file.exists("pnad2014.rds")){
+  download.file(
+    "https://zenodo.org/records/19056769/files/pnad2014.rds",
+    "pnad2014.rds",
+    mode = "wb", quiet = TRUE
+  )
+}
 
 pnad <- readRDS("pnad2014.rds")
 
@@ -142,30 +250,65 @@ rodar_replica_completa <- function(g) {
 ```{r}
 #| label: grafico-aposentadoria
 #| fig-align: center
-#| fig-width: 10
-#| fig-height: 5
+#| fig-width: 9
+#| fig-height: 4.6
 #| results: hide
 
-dados_h_urbano <- pnad_final %>% filter(HOMEM == 1, RURAL == 0)
+library(patchwork)
 
-par(mfrow = c(1, 2))
+# Convenção de cor por sexo (mesma usada na réplica completa)
+cor_grupo <- function(h_sexo) if (h_sexo == 1) "orange" else "red"
 
-invisible(capture.output(
-  rdplot(y = dados_h_urbano$APOSENTADO, x = dados_h_urbano$IDADE_CONTINUA, c = 65, p = 4,
-         title = "1º Estágio: Aposentadoria", y.label = "Proporção de Aposentados",
-         x.label = "Idade Contínua", col.lines = "orange")
-))
+# Gera cada rdplot como objeto ggplot "puro". hide = TRUE evita que o
+# rdrobust desenhe o plot sozinho (o que quebraria o grid do Typst);
+# em vez disso capturamos $rdplot e aplicamos um tema compacto para
+# caber nos 8 painéis lado a lado.
+gerar_rdplot <- function(y, x, corte, titulo, y_label, cor) {
+  rd <- suppressWarnings(suppressMessages(
+    rdplot(
+      y = y, x = x, c = corte, p = 4,
+      title = titulo, y.label = y_label, x.label = "Idade",
+      col.lines = cor, hide = TRUE
+    )
+  ))
+  rd$rdplot +
+    theme_minimal(base_size = 7) +
+    theme(
+      plot.title  = element_text(size = 7.5, face = "bold", hjust = 0.5),
+      axis.title  = element_text(size = 6.5),
+      axis.text   = element_text(size = 6),
+      plot.margin = margin(2, 3, 2, 3)
+    )
+}
 
-invisible(capture.output(
-  rdplot(y = dados_h_urbano$OCUPADO, x = dados_h_urbano$IDADE_CONTINUA, c = 65, p = 4,
-         title = "2º Estágio: Ocupação", y.label = "Ocupação",
-         x.label = "Idade Contínua", col.lines = "red")
-))
+# Linha de cima: 1º estágio (salto na Aposentadoria), um painel por grupo
+plots_1st <- map(config_grupos, function(g) {
+  df_sub <- pnad_final %>% filter(HOMEM == g$h_sexo, RURAL == g$r)
+  gerar_rdplot(
+    y = df_sub$APOSENTADO, x = df_sub$IDADE_CONTINUA, corte = g$corte,
+    titulo = paste0(g$nome, "\n1º Est.: Aposentadoria"),
+    y_label = "Aposentados", cor = cor_grupo(g$h_sexo)
+  )
+})
 
-par(mfrow = c(1, 1))
+# Linha de baixo: 2º estágio (efeito na Ocupação), um painel por grupo
+plots_2nd <- map(config_grupos, function(g) {
+  df_sub <- pnad_final %>% filter(HOMEM == g$h_sexo, RURAL == g$r)
+  gerar_rdplot(
+    y = df_sub$OCUPADO, x = df_sub$IDADE_CONTINUA, corte = g$corte,
+    titulo = paste0(g$nome, "\n2º Est.: Ocupação"),
+    y_label = "Ocupação", cor = cor_grupo(g$h_sexo)
+  )
+})
+
+# Une os 8 ggplots num único objeto (4 colunas x 2 linhas) — um único
+# float para o Typst, sem risco de invadir as subseções vizinhas
+painel_rdd <-
+  wrap_plots(plots_1st, nrow = 1) /
+  wrap_plots(plots_2nd, nrow = 1)
+
+painel_rdd
 ```
-
-**Resultados por grupo (Fuzzy RDD):**
 
 ```{r}
 #| label: tabela-aposentadoria
@@ -175,26 +318,24 @@ tabela_completa <- map_df(config_grupos, rodar_replica_completa)
 tabela_poster <- tabela_completa %>%
   transmute(
     Grupo = Grupo,
-    `1º Estágio` = paste0(FS_Coef, " (", FS_Se, ")"),
-    `2º Estágio` = paste0(SS_Coef, " (", SS_Se, ")"),
-    N = N_eff
+    `1º Est.` = paste0(FS_Coef, " (", FS_Se, ")"),
+    `2º Est.` = paste0(SS_Coef, " (", SS_Se, ")")
   )
 
-kable(tabela_poster, align = "lccr")
+kable(tabela_poster, align = "lcc")
 ```
 :::
 
 ::: {#exemplo5}
+## Controle Sintético
 
-## Aplicação: Efeito Causal no País Basco
+**Controle Sintético:** método utilizado para estimar efeitos causais de intervenções que afetam uma única unidade (país, região, empresa), construindo um contrafactual como combinação ponderada de unidades não tratadas que aproxima a trajetória da unidade tratada antes da intervenção.
 
-**Contexto e Metodologia:**
+**Aplicação: Efeito Causal no País Basco**
 
 * **Objetivo:** Avaliar o efeito causal dos conflitos armados no País Basco entre 1960 e 1997.
-* **Método:** Utilização de Controle Sintético para criar um contrafactual baseado em outras regiões da Espanha não impactadas pelos conflitos.
-* **Base:** Replicação do estudo clássico de Abadie e Gardeazabal (2003).
-
-**Evolução do PIB per capita:**
+* **Método:** Controle Sintético para criar um contrafactual baseado em outras regiões da Espanha.
+* **Base:** Réplica de Abadie e Gardeazabal (2003).
 
 ```{r}
 #| label: preparacao-dados
@@ -217,20 +358,17 @@ dados_preparados <- dataprep(
 ```{r}
 #| label: modelo-grafico
 #| fig-align: center
-#| fig-width: 8
-#| fig-height: 5
+#| fig-width: 6.5
+#| fig-height: 4
 #| results: hide
 
 invisible(capture.output({resultado_synth <- synth(data.prep.obj = dados_preparados)}))
 
 path.plot(synth.res = resultado_synth, dataprep.res = dados_preparados,
           Ylab = "PIB per capita (1986 USD)", Xlab = "Ano",
-          Legend = c("País Basco", "País Basco Sintético"), Legend.position = "bottomright")
+          Legend = c("País Basco", "Sintético"), Legend.position = "bottomright")
 abline(v = 1975, lty = 2, col = "red") 
-
 ```
-
-**Resultados do Modelo:**
 
 ```{r}
 #| label: resultados-finais
@@ -246,30 +384,36 @@ tabela_comparacao <- data.frame(Ano = anos, Real = real, Sintetico = sintetico) 
 ace_pos_1975 <- tabela_comparacao %>% filter(Ano >= 1975) %>% summarise(ACE_Absoluto = mean(Gap), ACE_Percentual = mean(Gap_Percentual))
 
 tabela_ace <- data.frame(
-  Métrica = c("Queda Média Absoluta (em milhares)", "Queda Média Relativa (%)"),
+  Métrica = c("Queda Média Absoluta (mil)", "Queda Média Relativa (%)"),
   Estimativa = c(ace_pos_1975$ACE_Absoluto, ace_pos_1975$ACE_Percentual)
 )
 
-kable(tabela_ace, digits = 2, col.names = c("Indicador de Impacto (Pós-1975)", "Estimativa do ACE"))
-
+kable(tabela_ace, digits = 2, col.names = c("Indicador (Pós-1975)", "Estimativa do ACE"))
 ```
+:::
 
+::: {#exemplo6}
+## Critério Sintético (Hill)
+
+**Critério Sintético:** conjunto de nove critérios (força da associação, consistência, especificidade, temporalidade, gradiente biológico, plausibilidade, coerência, experimento e analogia) utilizados como referencial para avaliar se uma relação observada entre uma variável $X$ e um resultado $Y$ é, de fato, causal. Quanto mais critérios forem satisfeitos, maior a confiança na inferência causal, reduzindo a probabilidade de que a associação seja explicada por viés, confundimento ou acaso.
 :::
 
 ::::
 
+<!-- ============ FIM DA GRADE 3x2 ============ -->
+
 :::: {layout="[1, 1]"}
 
 ::: {#referencias}
-
 ## Referências Bibliográficas
 
 * Autor, A. (2025). *Nome do Artigo Principal*. Revista de Ciências.
 * Autor, B. (2026). *Livro de Base da IC*. Editora Universitária.
+* Card, D. (1993). Using Geographic Variation in College Proximity to Estimate the Return to Schooling. NBER Working Paper No. 4483.
+* Angrist, J. D. & Imbens, G. W. (1994). Identification and Estimation of Local Average Treatment Effects. Econometrica, 62(2): 467–475.
 :::
 
 ::: {#agradecimentos}
-
 ## Agradecimentos
 
 Agradeço ao meu orientador e aos órgãos de fomento (como CNPq, FAPESP, Capes) que auxiliaram no desenvolvimento deste trabalho.

@@ -29,3 +29,4 @@ pnad2014.rds
 # ==========================================
 .DS_Store
 Thumbs.db
+**/*.quarto_ipynb
