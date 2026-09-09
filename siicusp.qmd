@@ -15,22 +15,32 @@ execute:
 <!-- CABEÇALHO CUSTOMIZADO COM TYPST -->
 
 ```{=typst}
+
+#grid(
+  columns: (1fr, 1fr, 1fr),
+  align: center,
+  image("logo_ime_usp.png", width: 30%),
+  image("USP-240x135.jpg", width: 30%),
+  image("logo_siicusp.gif", width: 30%),
+)
+
 #align(center)[
-  #image("USP-240x135.jpg", width: 10%)
-  
   #v(1em)
   #text(weight: "bold", size: 2.2em)[Fundamentos de Inferência Causal]
-  
+
   #v(0.5em)
   #text(size: 1.2em)[Orientador: Rafael B. Stern]
-  
+
   #v(1em)
-  #text(weight: "bold", size: 1.2em)[Daniela Siqi Chen,  Franklin Alonso Alves Bezerra, João Vitor Vasconcelos Lima]
-  
+  #text(weight: "bold", size: 1.2em)[
+    Daniela Siqi Chen, Franklin Alonso Alves Bezerra, João Vitor Vasconcelos Lima
+  ]
+
   #text(size: 1.1em)[Universidade de São Paulo (USP)]
-  
+
   #v(2em)
 ]
+
 ```
 
 :::: {layout="[1, 1]"}
