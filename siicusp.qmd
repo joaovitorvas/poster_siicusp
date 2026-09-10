@@ -67,12 +67,188 @@ Este trabalho teve como objetivo revisar os fundamentos teóricos da inferência
 ## Critérios backdoor
 
 **Critério Backdoor:** método utilizado para identificar um conjunto de variáveis que deve ser controlado para estimar o efeito causal de uma variável $X$ sobre um resultado $Y$. O critério busca bloquear os caminhos *backdoor*, isto é, caminhos que conectam $X$ e $Y$ por meio de variáveis de confusão, evitando que associações não causais sejam interpretadas como efeito causal.
+
+**Aplicação: relação entre crédito e inadimplência**
+
+* **Objetivo:** Avaliar o efeito causal do aumento do crédito sobre a probabilidade de inadimplência.
+* **Método:** Critério Backdoor, controlando confundidores como fatores demográficos, histórico de pagamento e renda.
+* **Base:** Pitso e Michael (2026).
+
+```{r}
+#| label: graficos-backdoor
+#| fig-align: center
+#| fig-width: 14
+#| fig-height: 5
+
+library(ggdag)
+library(ggplot2)
+library(ggraph)
+library(patchwork)
+library(cowplot)
+
+# --- Gráfico 1: DAG com os confundidores ---
+dag_backdoor <- dagify(Demo ~ Income,
+              CreditLimit ~ Demo,
+              Default ~ CreditLimit + Demo + Income,
+              exposure = "CreditLimit",
+              outcome = "Default",
+              
+              coords = list(x = c("Income" = 1, "Demo" = 1, "CreditLimit" = 0.5, "Default" = 1.5),
+                            y = c("Income" = 3, "Demo" = 2, "CreditLimit" = 1, "Default" = 1)),
+              
+              labels = c(Income = "Renda",
+                         Demo = "Demográficos,\nHistórico de\nPagamento,\nCobranças",
+                         CreditLimit = "Limite de \nCrédito",
+                         Default = "Inadimplência"))
+
+dag_backdoor_tidy <- tidy_dagitty(dag_backdoor)
+
+p_dag_backdoor <- ggplot(dag_backdoor_tidy, aes(x = x, y = y, xend = xend, yend = yend)) +
+  theme_dag() +
+  geom_dag_node(shape = 21,
+                fill = "#e0f2f1",
+                color = "#173759",
+                size = 31,
+                stroke = 1.2) +
+  geom_dag_edges_link(edge_colour = "#173759",
+                      edge_width = 1,
+                      arrow = grid::arrow(length = grid::unit(10, "pt"), type = "closed"),
+                      start_cap = ggraph::circle(13, "mm"),
+                      end_cap = ggraph::circle(13, "mm")) +
+  geom_dag_text(aes(label = label),
+                color = "#173759",
+                size = 2.7,
+                fontface = "bold",
+                lineheight = 1) + 
+  scale_x_continuous(expand = expansion(mult = 0.25)) +
+  scale_y_continuous(expand = expansion(mult = 0.25)) +
+  labs(title = "Representação do DAG com o efeito de crédito sobre inadimplência",
+       subtitle="(Adaptado de Pitso e Michael, 2026)") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 13),
+        plot.subtitle = element_text(hjust = 0.5, size = 11, color = "gray30"))
+
+# --- Gráfico 2: distribuição do ATE ---
+p_ATE_backdoor <- cowplot::ggdraw() + 
+  cowplot::draw_image("credito_inadimplencia_distribuicao_ATE.png")
+
+# --- Unindo os gráficos num painel
+p_backdoor <- p_dag_backdoor | p_ATE_backdoor
+show(p_backdoor)
+```
+
+```{r}
+#| label: tabela-backdoor
+
+library(tidyverse)
+
+tab_backdoor <- tibble(
+  Indicador = c("Efeito Médio de Tratamento (ATE)", "Intervalo de Alta Densidade (94% HDI)"),
+  Estimativa = c("-0,0144 (-1,44%)", "[-0,020; -0,009]")
+)
+
+knitr::kable(tab_backdoor, align = c("lcc"))
+
+```
 :::
 
 ::: {#exemplo2}
 ## Critério frontdoor
 
 **Critério Frontdoor:** método utilizado para identificar o efeito causal de uma variável $X$ sobre um resultado $Y$ mesmo quando existe confundimento entre $X$ e $Y$. O critério utiliza uma variável mediadora $M$, que recebe o efeito de $X$ e influencia $Y$, permitindo bloquear os caminhos de confundimento e estimar o efeito causal de $X$ sobre $Y$.
+
+**Aplicação: impacto da educação dos pais sobre o rendimento escolar dos filhos**
+
+* **Objetivo:** Avaliar o efeito causal do nível de escolaridade dos pais sobre o desempenho escolar dos seus filhos matriculados no 5º ano.
+* **Método:** Critério Frontdoor, usando a condição socioeconômica familiar como mediador e controlando características do aluno, da família e da escola.
+* **Base:** Réplica de Santos, Mariano e Costa (2019) com dados do SAEB 2015.
+
+```{r}
+#| label: dag-frontdoor
+#| fig-align: center
+#| fig-width: 14
+#| fig-height: 7
+
+library(ggdag)
+library(ggplot2)
+library(ggraph)
+
+# --- Gráfico: DAG com as variáveis do modelo ---
+dag_frontdoor <- dagify(educ_pais ~ unobserved + controles,
+              fator_socioeconomico ~ unobserved + controles + educ_pais,
+              rendimento_filhos ~ unobserved + controles + educ_pais + fator_socioeconomico,
+              exposure = "educ_pais",
+              outcome = "rendimento_filhos",
+              
+              coords = list(x = c("educ_pais" = 0.3, "fator_socioeconomico" = 1, "rendimento_filhos" = 1.7, "controles" = 1, "unobserved" = 1),
+                            y = c("educ_pais" = 1.5, "fator_socioeconomico" = 1.2, "rendimento_filhos" = 1.5, "controles" = 2, "unobserved" = 0.5)),
+              
+              labels = c(educ_pais = "Educação \ndos Pais",
+                         fator_socioeconomico = "Condições \nSocioeconômicas",
+                         rendimento_filhos = "Rendimento \nescolar do \nfilho",
+                         controles = "Características \ndo aluno, família\n e escola",
+                         unobserved = "Variáveis não\n observadas"))
+
+dag_frontdoor_tidy <- tidy_dagitty(dag_frontdoor)
+
+grafico_frontdoor <- ggplot(dag_frontdoor_tidy, aes(x = x, y = y, xend = xend, yend = yend)) +
+  theme_dag() +
+  geom_dag_node(shape = 21,
+                fill = "#e0f2f1",
+                color = "#173759",
+                size = 31,
+                stroke = 1.2) +
+  geom_dag_edges_link(edge_colour = "#173759",
+                      edge_width = 1,
+                      arrow = grid::arrow(length = grid::unit(10, "pt"), type = "closed"),
+                      start_cap = ggraph::circle(13, "mm"),
+                      end_cap = ggraph::circle(13.5, "mm")) +
+  geom_dag_text(aes(label = label),
+                color = "#173759",
+                size = 2.7,
+                fontface = "bold",
+                lineheight = 1) + 
+  scale_x_continuous(expand = expansion(mult = 0.25)) +
+  scale_y_continuous(expand = expansion(mult = 0.25)) +
+  labs(title = "Representação do DAG com o efeito de educação dos pais sobre rendimento escolar dos filhos",
+       subtitle="(Produzido com base em Santos, Mariano e Costa, 2019)") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 13),
+        plot.subtitle = element_text(hjust = 0.5, size = 11, color = "gray30"))
+
+show(grafico_frontdoor)
+```
+
+```{r}
+#| label: tabela-frontdoor
+
+library(tidyverse)
+
+simulacoes_frontdoor <- read_csv('simulacoes_frontdoor.csv')
+
+# 2. Agregar os resultados por disciplina com média ponderada por N
+tabela_frontdoor <- simulacoes_frontdoor %>%
+  group_by(Outcome) %>%
+  summarise(
+    `Efeito Total` = sprintf("%.2f (%.2f – %.2f)", 
+                             sum(Total_effect * N) / sum(N), 
+                             sum(Total_effect_ci_lo * N) / sum(N), 
+                             sum(Total_effect_ci_hi * N) / sum(N)),
+    `Efeito Direto` = sprintf("%.2f (%.2f – %.2f)", 
+                                    sum(ADE_avg * N) / sum(N), 
+                                    sum(ADE_avg_ci_lo * N) / sum(N), 
+                                    sum(ADE_avg_ci_hi * N) / sum(N)),
+    `Efeito Indireto` = sprintf("%.2f (%.2f – %.2f)", 
+                                       sum(ACME_avg * N) / sum(N), 
+                                       sum(ACME_avg_ci_lo * N) / sum(N), 
+                                       sum(ACME_avg_ci_hi * N) / sum(N)),
+    `Proporção Mediada (%)` = sprintf("%.1f%% (%.1f%% – %.1f%%)", 
+                                      (sum(Prop_mediated * N) / sum(N)) * 100, 
+                                      (sum(Prop_mediated_ci_lo * N) / sum(N)) * 100, 
+                                      (sum(Prop_mediated_ci_hi * N) / sum(N)) * 100)
+  ) %>%
+  rename(Disciplina = Outcome)
+
+knitr::kable(tabela_frontdoor, align = c("l", "c", "c", "c", "c"))
+```
 :::
 
 ::: {#exemplo3}
@@ -417,16 +593,17 @@ kable(tabela_ace, digits = 2, col.names = c("Indicador (Pós-1975)", "Estimativa
 ::: {#referencias}
 ## Referências Bibliográficas
 
-* Autor, A. (2025). *Nome do Artigo Principal*. Revista de Ciências.
-* Autor, B. (2026). *Livro de Base da IC*. Editora Universitária.
-* Card, D. (1993). Using Geographic Variation in College Proximity to Estimate the Return to Schooling. NBER Working Paper No. 4483.
+* Abadie, A., & Gardeazabal, J. (2003). The economic costs of conflict: A case study of the Basque Country. American Economic Review, 93(1), 113–132.
 * Angrist, J. D. & Imbens, G. W. (1994). Identification and Estimation of Local Average Treatment Effects. Econometrica, 62(2): 467–475.
+* Card, D. (1993). Using Geographic Variation in College Proximity to Estimate the Return to Schooling. NBER Working Paper No. 4483.
+* Pitso, S. D., & Michael, T. (2026). Bayesian causal inference for credit default risk. Risks, 14(2), 38.
+* Santos, M. M., Mariano, F. Z., & Costa, E. M. (2019). Efeitos da educação dos pais sobre o rendimento escolar dos filhos via mediação das condições socioeconômicas. Economia Aplicada, 23(2), 145–182.
 :::
 
 ::: {#agradecimentos}
 ## Agradecimentos
 
-Agradeço ao meu orientador e aos órgãos de fomento (como CNPq, FAPESP, Capes) que auxiliaram no desenvolvimento deste trabalho.
+Agradecemos ao nosso orientador e aos órgãos de fomento (como CNPq, FAPESP, Capes) que auxiliaram no desenvolvimento deste trabalho.
 :::
 
 ::::
