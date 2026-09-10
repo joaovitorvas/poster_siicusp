@@ -5,7 +5,7 @@ format:
     margin:
       x: "5cm"
       y: "5cm"
-    fontsize: "18pt"
+    fontsize: "20pt"
 execute:
   echo: false
   warning: false
@@ -57,19 +57,20 @@ A inferência causal vai além da identificação de padrões em dados, buscando
 Este trabalho teve como objetivo revisar os fundamentos teóricos da inferência causal, com base nos princípios de Fisher e na modelagem gráfica de Judea Pearl, e replicar empiricamente métodos de estimação causal, como critérios backdoor e frontdoor, variáveis instrumentais, regression discontinuity design (RDD) e controle sintético. Os resultados foram organizados em material didático acessível, visando contribuir para o ensino e a aplicação desses métodos em pesquisas observacionais.
 :::
 
-::: {#Motivação}
+::::
+
+<!-- ============ GRADE DE EXEMPLOS: 3 COLUNAS x 2 LINHAS ============ -->
+
+
+:::: {layout="[1, 1, 1]"}
+
+::: {#exemplo1}
 ## Motivação
 
 A identificação de relações causais é fundamental para compreender os efeitos de intervenções e apoiar a tomada de decisões em diferentes áreas. Entretanto, observar uma associação entre duas variáveis não é suficiente para concluir que uma delas causa alterações na outra, devido à presença de fatores de confusão e outras fontes de viés. Em estudos observacionais, nos quais a exposição não é determinada de forma controlada, esse desafio se torna ainda mais evidente. Assim, torna-se necessário utilizar estratégias que permitam distinguir associações espúrias de efeitos causais e produzir estimativas mais confiáveis para diferentes contextos de pesquisa.
 :::
 
-::::
-
-<!-- ============ GRADE DE EXEMPLOS: 3 COLUNAS x 2 LINHAS ============ -->
-
-:::: {layout="[1, 1, 1]"}
-
-::: {#exemplo1}
+::: {#exemplo2}
 ## Critérios backdoor
 
 **Critério Backdoor:** método utilizado para identificar um conjunto de variáveis que deve ser controlado para estimar o efeito causal de uma variável $X$ sobre um resultado $Y$. O critério busca bloquear os caminhos *backdoor*, isto é, caminhos que conectam $X$ e $Y$ por meio de variáveis de confusão, evitando que associações não causais sejam interpretadas como efeito causal.
@@ -157,7 +158,7 @@ knitr::kable(tab_backdoor, align = c("lcc"))
 ```
 :::
 
-::: {#exemplo2}
+::: {#exemplo3}
 ## Critério frontdoor
 
 **Critério Frontdoor:** método utilizado para identificar o efeito causal de uma variável $X$ sobre um resultado $Y$ mesmo quando existe confundimento entre $X$ e $Y$. O critério utiliza uma variável mediadora $M$, que recebe o efeito de $X$ e influencia $Y$, permitindo bloquear os caminhos de confundimento e estimar o efeito causal de $X$ sobre $Y$.
@@ -257,7 +258,11 @@ knitr::kable(tabela_frontdoor, align = c("l", "c", "c", "c", "c"))
 ```
 :::
 
-::: {#exemplo3}
+::::
+
+:::: {layout="[1, 1, 1]"}
+
+::: {#exemplo4}
 ## Variáveis instrumentais
 
 **Variáveis Instrumentais:** método utilizado para estimar um efeito causal quando existe confundimento entre a variável de tratamento $X$ e o resultado $Y$. Utiliza-se uma variável instrumental $Z$, que influencia $X$, mas não afeta $Y$ diretamente nem está associada aos fatores não observados que influenciam $Y$. Assim, $Z$ permite isolar a variação de $X$ que pode ser utilizada para identificar seu efeito causal sobre $Y$.
@@ -366,11 +371,7 @@ knitr::kable(tab_concl, align = c("l", "c"))
 
 :::
 
-::::
-
-:::: {layout="[1, 1, 1]"}
-
-::: {#exemplo4}
+::: {#exemplo5}
 ## RDD
 
 **Regressão Descontínua Fuzzy (RDD):** método utilizado para estimar efeitos causais quando a probabilidade de receber um tratamento muda de forma descontínua ao redor de um determinado ponto de corte. No caso *fuzzy*, ultrapassar o ponto de corte não determina o tratamento, mas altera sua probabilidade de recebê-lo.
@@ -518,7 +519,7 @@ kable(tabela_poster, align = "lcc")
 ```
 :::
 
-::: {#exemplo5}
+::: {#exemplo6}
 ## Controle Sintético
 
 **Controle Sintético:** método utilizado para estimar efeitos causais de intervenções que afetam uma única unidade (país, região, empresa), construindo um contrafactual como combinação ponderada de unidades não tratadas que aproxima a trajetória da unidade tratada antes da intervenção.
@@ -584,12 +585,6 @@ kable(tabela_ace, digits = 2, col.names = c("Indicador (Pós-1975)", "Estimativa
 ```
 :::
 
-::: {#exemplo6}
-## Critério Sintético (Hill)
-
-**Critério Sintético:** conjunto de nove critérios (força da associação, consistência, especificidade, temporalidade, gradiente biológico, plausibilidade, coerência, experimento e analogia) utilizados como referencial para avaliar se uma relação observada entre uma variável $X$ e um resultado $Y$ é, de fato, causal. Quanto mais critérios forem satisfeitos, maior a confiança na inferência causal, reduzindo a probabilidade de que a associação seja explicada por viés, confundimento ou acaso.
-:::
-
 ::::
 
 <!-- ============ FIM DA GRADE 3x2 ============ -->
@@ -609,7 +604,16 @@ kable(tabela_ace, digits = 2, col.names = c("Indicador (Pós-1975)", "Estimativa
 ::: {#agradecimentos}
 ## Agradecimentos
 
-Agradecemos ao nosso orientador e aos órgãos de fomento (como CNPq, FAPESP, Capes) que auxiliaram no desenvolvimento deste trabalho.
+Os autores agradecem ao Prof. Dr. Rafael B. Stern pela orientação fundamental durante o desenvolvimento desta pesquisa. Agradecem também ao iCEM (Iniciação Científica para Estudantes Medalhistas) pela oportunidade acadêmica, e ao Conselho Nacional de  Desenvolvimento Científico e Tecnológico (CNPq) pelo apoio financeiro concedido. 
+
+```{=typst}
+#align(right)[
+  #image("qrcode_repo.png", width: 18%)
+  #v(-0.3em)
+  #text(size: 0.7em)[Repositório do projeto: https://github.com/joaovitorvas/exemplos_inferencia_causal]
+]
+```
+
 :::
 
 ::::
