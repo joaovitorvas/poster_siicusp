@@ -57,6 +57,12 @@ A inferência causal vai além da identificação de padrões em dados, buscando
 Este trabalho teve como objetivo revisar os fundamentos teóricos da inferência causal, com base nos princípios de Fisher e na modelagem gráfica de Judea Pearl, e replicar empiricamente métodos de estimação causal, como critérios backdoor e frontdoor, variáveis instrumentais, regression discontinuity design (RDD) e controle sintético. Os resultados foram organizados em material didático acessível, visando contribuir para o ensino e a aplicação desses métodos em pesquisas observacionais.
 :::
 
+::: {#Motivação}
+## Motivação
+
+A identificação de relações causais é fundamental para compreender os efeitos de intervenções e apoiar a tomada de decisões em diferentes áreas. Entretanto, observar uma associação entre duas variáveis não é suficiente para concluir que uma delas causa alterações na outra, devido à presença de fatores de confusão e outras fontes de viés. Em estudos observacionais, nos quais a exposição não é determinada de forma controlada, esse desafio se torna ainda mais evidente. Assim, torna-se necessário utilizar estratégias que permitam distinguir associações espúrias de efeitos causais e produzir estimativas mais confiáveis para diferentes contextos de pesquisa.
+:::
+
 ::::
 
 <!-- ============ GRADE DE EXEMPLOS: 3 COLUNAS x 2 LINHAS ============ -->
